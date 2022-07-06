@@ -94,7 +94,7 @@ namespace LoggerFramework
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="LoggerException"></exception>
-        public Logger AddInfoLineWithHeader(string head, string line)
+        public Logger AddInfoToLineWithHeader(string head, string line)
         {
             if (head == null) throw new ArgumentNullException("The header were null.");
             if (line == null) throw new ArgumentNullException("The line were null.");
@@ -277,6 +277,74 @@ namespace LoggerFramework
             else throw new LoggerException("Attempt to use empty array");
         }
 
+        //// ~~~~~~ Dictionary string ~~~~~~ ////
+
+        /// <summary>
+        /// Converts the dictionary to one single string with key at the start and values as continue.
+        /// </summary>
+        /// <param name="dict">Targeted dictionary to handle.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public Logger AddDictionaryWArray(Dictionary<string, string[]> dict)
+        {
+            if (dict == null) throw new ArgumentNullException("Targeted dictionary were null.");
+            else
+            {
+                preparedLine += HandleDictionary(dict) + ", ";
+                return this;
+            }
+        }
+
+        /// <summary>
+        /// Converts the dictionary to one single string with key at the start and values as continue with the initial title.
+        /// </summary>
+        /// <param name="header">Word to designate a header for an array(without separators)</param>
+        /// <param name="dict">Targeted dictionary to handle.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="LoggerException"></exception>
+        public Logger AddDictionaryWArray(string header, Dictionary<string, string[]> dict)
+        {
+            if (header == null) throw new ArgumentNullException("The header string were null.");
+            if (dict == null) throw new ArgumentNullException("Targeted dictionary were null.");
+            if (header.Replace(" ", "").Replace("<a>", "").Trim().Length < 1) throw new LoggerException("The header string is empty.");
+            else
+            {
+                preparedLine += header + ": " + HandleDictionary(dict) + ", ";
+                return this;
+            }
+        }
+
+        private string HandleDictionary(Dictionary<string, string[]> dict)
+        {
+            if (dict == null) throw new ArgumentNullException("Targeted dictionary were null.");
+            string whole = "";
+            if (dict.Count > 0)
+            {
+                foreach (string key in dict.Keys)
+                {
+                    if (key != null && getFlatStr(key).Length > 0)
+                    {
+                        whole += key + ":~ ";
+                        foreach (string value in dict[key])
+                        {
+                            if (value != null && getFlatStr(value).Length > 0)
+                            {
+                                whole += value + "<a>";
+                            }
+                            else throw new LoggerException("The value were null or empty.");
+                        }
+                        whole.Remove(whole.Length - 3);
+                        whole += "\n";
+                    }
+                    else throw new LoggerException("The key were null or empty.");
+                }
+                if (getFlatStr(whole).Length > 0) return whole.TrimEnd();
+                else throw new LoggerException("Attempt to add empty dictionary.");
+            }
+            else throw new LoggerException("Attempt to use empty dictionary");
+        }
+
         #endregion
 
         /// <summary>
@@ -355,7 +423,7 @@ namespace LoggerFramework
             /// <param name="line"></param>
             /// <returns></returns>
             /// <exception cref="LoggerException">Occurs when you try to add empty line.</exception>
-            public InDeepLine AddInfoLine(string line)
+            public InDeepLine AddInfoToLine(string line)
             {
                 if (getFlatStr(line).Length > 0)
                 {
@@ -373,7 +441,7 @@ namespace LoggerFramework
             /// <returns></returns>
             /// <exception cref="ArgumentNullException"></exception>
             /// <exception cref="LoggerException"></exception>
-            public InDeepLine AddInfoLineWithHeader(string head, string line)
+            public InDeepLine AddInfoToLineWithHeader(string head, string line)
             {
                 if (head == null) throw new ArgumentNullException("The header were null.");
                 if (line == null) throw new ArgumentNullException("The line were null.");
@@ -394,7 +462,6 @@ namespace LoggerFramework
                 if (getFlatStr(wholeLine).Length > $"[{DateTime.Now:HH:mm:ss}] ".Length && (fromMethod != null || fromObject != null || highlightHolder.Count > 0))
                     wholeLine = wholeLine.Remove(wholeLine.Length - 1) + ": ";
                 if (deppLine != "") wholeLine += deppLine;
-                else throw new LoggerException("The info line is empty.");
                 logger.AddInfoToLine(wholeLine.Remove(wholeLine.Length - 2));
             }
 
@@ -456,13 +523,15 @@ namespace LoggerFramework
         /// Records the log file with all lines that've been added.
         /// <para>Can be used at the end without accepting the line.</para>
         /// </summary>
+        /// <param name="mode">Usualy appends new info to an existing file. For recreating a file use 1.</param>
         /// <exception cref="LoggerException">Occurs when you try to add empty log.</exception>
-        public void CreateLog()
+        public void CreateLog(int mode = 0)
         {
             string[] separatedPath = pathToLog.Split('/');
             string folderPath = "";
+            if (separatedPath.Length > 1)
             for (int i = 0; i < separatedPath.Length - 1; i++) folderPath += separatedPath[i];
-            if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+            if (folderPath != "") if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
 
             string forAdd = preparedLine;
             if (getFlatStr(preparedLine).Length > 11 && timeStampAdded) forAdd = forAdd.Remove(forAdd.Length - 2);
@@ -474,13 +543,20 @@ namespace LoggerFramework
             }
             else
             {
-                using (FileStream fs = new FileStream(pathToLog, FileMode.Append, FileAccess.Write))
+                FileMode fileMode;
+                switch (mode)
+                {
+                    case 1: fileMode = FileMode.Create; break;
+                    default: fileMode = FileMode.Append; break;
+                }
+                using (FileStream fs = new FileStream(pathToLog, fileMode, FileAccess.Write))
                 {
                     using (StreamWriter sw = new StreamWriter(fs))
                     {
                         foreach (string line in allLines)
                         {
                             sw.WriteLine(line.Replace("<a>", "; ").Trim());
+                            Console.WriteLine(line.Replace("<a>", "; ").Trim());
                         }
                     }
                 }
@@ -512,6 +588,6 @@ namespace LoggerFramework
 
     internal static class LilHelper
     {
-        internal static string GetFlatStr(string str) => str.Replace(" ", "").Replace("<a>", "").Replace("\r", "").Replace("\n", "").Trim();
+        internal static string GetFlatStr(string str) => str.Replace("<a>", "").Replace(":~", "").Replace("\r", "").Replace("\n", "").Replace(" ", "").Trim();
     }
 }
