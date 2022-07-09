@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Windows.Forms;
 
 namespace LoggerFramework
 {
@@ -42,7 +43,8 @@ namespace LoggerFramework
         {
             if (!timeStampAdded)
             {
-                preparedLine += $"[{DateTime.Now:HH:mm:ss}] ";
+                string str = $"[{DateTime.Now:HH:mm:ss}] " + preparedLine;
+                preparedLine = str;
                 timeStampAdded = true;
                 return this;
             }
@@ -78,7 +80,8 @@ namespace LoggerFramework
             if (timeStampAdded) throw new LoggerException("Timestamp is already added for this line.");
             if (getFlatStr(line).Length > 0)
             {
-                preparedLine += $"[{DateTime.Now:HH:mm:ss}] ";
+                string str = $"[{DateTime.Now:HH:mm:ss}] " + preparedLine;
+                preparedLine = str;
                 timeStampAdded = true;
                 preparedLine += line + ", ";
                 return this;
@@ -87,20 +90,31 @@ namespace LoggerFramework
         }
 
         /// <summary>
-        /// Adds a standard line with <see cref="String"/> type, but as highlighted information([Header: Object]).
+        /// Adds a standard line with <see cref="String"/> type, but as highlighted information: Header: Object or [Header]: Object.
         /// </summary>
-        /// <param name="head">Header of the topic.</param>
+        /// <param name="header">Header of the topic.</param>
         /// <param name="line">Highlighted line.</param>
+        /// <param name="type">
+        /// <list type="number">
+        /// <item>Header: Object</item>
+        /// <item>[Header]: Object</item>
+        /// </list></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="LoggerException"></exception>
-        public Logger AddInfoToLineWithHeader(string head, string line)
+        public Logger AddInfoToLineWithHeader(string header, string line, int type = 2)
         {
-            if (head == null) throw new ArgumentNullException("The header were null.");
+            if (header == null) throw new ArgumentNullException("The header were null.");
             if (line == null) throw new ArgumentNullException("The line were null.");
-            if (getFlatStr(line).Length > 0 && getFlatStr(head).Length > 0)
+            if (getFlatStr(line).Length > 0 && getFlatStr(header).Length > 0)
             {
-                preparedLine += $"{head}: {line}, ";
+                switch (type)
+                {
+                    case 1: preparedLine += $"{header}: "; break;
+                    case 2: preparedLine += $"[{header}]: "; break;
+                    default: preparedLine += $"{header}: "; break;
+                }
+                preparedLine += $"{line}, ";
                 return this;
             }
             else throw new LoggerException("Attempt to add empty header or line.");
@@ -109,7 +123,7 @@ namespace LoggerFramework
         #region
 
         //// ~~~~~~ Object ~~~~~~ ////
-
+            
         /// <summary>
         /// Converts the array to one single string.
         /// </summary>
@@ -348,10 +362,10 @@ namespace LoggerFramework
         #endregion
 
         /// <summary>
-        /// Use for more precise setting the line.
+        /// Use to extend the information of the line.
         /// </summary>
         /// <returns></returns>
-        public InDeepLine AddPreciseInfo()
+        public InDeepLine AddExtendedInfo()
         {
             return new InDeepLine(this);
         }
@@ -390,13 +404,13 @@ namespace LoggerFramework
             /// <param name="obj">Name of the sender object.</param>
             /// <returns></returns>
             /// <exception cref="LoggerException">Occurs when you try to add object name when it was already added.</exception>
-            public InDeepLine AddFromObject(object obj)
+            public InDeepLine AddFromObject(Control obj)
             {
                 if (obj is null) throw new ArgumentNullException("Sender object were null.");
 
                 if (fromObject == null)
                 {
-                    fromObject = "Object/" + obj.ToString();
+                    fromObject = "Object/" + obj.Name;
                     return this;
                 }
                 else throw new LoggerException("From object name is already set.");
@@ -406,14 +420,14 @@ namespace LoggerFramework
             /// Used to highlight parts from which the information comes.
             /// </summary>
             /// <param name="light">Name of the parent method or object.</param>
-            /// <param name="obj">Name of the sender object.</param>
+            /// <param name="str">The second string after the spliter.</param>
             /// <returns></returns>
-            /// <exception cref="ArgumentNullException">Occurs when you try to use <see cref="Nullable"/> <see cref="String"/></exception>
-            public InDeepLine AddHighlight(string light, string obj)
+            /// <exception cref="ArgumentNullException">Occurs when you try to use <see cref="Nullable"/> <see cref="string"/></exception>
+            public InDeepLine AddHighlight(string light, string str)
             {
                 if (light == null) throw new ArgumentNullException("Highlight string were null.");
-                if (obj == null) throw new ArgumentNullException("Sender object name were null.");
-                highlightHolder.Add(light + "/" + obj);
+                if (str == null) throw new ArgumentNullException("Second string name were null.");
+                highlightHolder.Add(light + "/" + str);
                 return this;
             }
 
@@ -436,18 +450,18 @@ namespace LoggerFramework
             /// <summary>
             /// Adds a standard line with <see cref="String"/> type, but as highlighted information([Header: Object]).
             /// </summary>
-            /// <param name="head">Header of the topic.</param>
+            /// <param name="header">Header of the topic.</param>
             /// <param name="line">Highlighted line.</param>
             /// <returns></returns>
             /// <exception cref="ArgumentNullException"></exception>
             /// <exception cref="LoggerException"></exception>
-            public InDeepLine AddInfoToLineWithHeader(string head, string line)
+            public InDeepLine AddInfoToLineWithHeader(string header, string line)
             {
-                if (head == null) throw new ArgumentNullException("The header were null.");
+                if (header == null) throw new ArgumentNullException("The header were null.");
                 if (line == null) throw new ArgumentNullException("The line were null.");
-                if (getFlatStr(line).Length > 0 && getFlatStr(head).Length > 0)
+                if (getFlatStr(line).Length > 0 && getFlatStr(header).Length > 0)
                 {
-                    deppLine += $"{head}: {line}, ";
+                    deppLine += $"{header}: {line}, ";
                     return this;
                 }
                 else throw new LoggerException("Attempt to add empty header or line.");
